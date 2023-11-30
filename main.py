@@ -15,6 +15,32 @@ from menu_windows.window_add import WindowAdd
 from menu_windows.window_update import WindowUpdate
 import csv
 import pandas as pd
+import socket
+from io import StringIO
+
+server_address = ('localhost', 4999)
+
+SIZE = 10000
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(server_address)
+
+def send_file():
+    new_file = pd.read_csv(FILE_PATH)
+    new_file = new_file.to_csv(index=False).strip('\n').split('\n')
+    new_file_string = '\r\n'.join(df)
+
+    s.send(new_file_string.encode('utf8'))
+    if os.path.exists(FILE_PATH):
+        os.remove(FILE_PATH)
+
+def recv_file():
+    message = s.recv(SIZE)
+    message = message.decode()
+    new_file = pd.read_csv(StringIO(message), sep=',')
+    new_file.to_csv(FILE_PATH)
+
+recv_file()
 
 if get_temp_path() == None:
     create_temp()
@@ -177,6 +203,7 @@ def func_delete():
 def func_save():
     if has_unsaved_changes():
         save()
+        send_file()
         messagebox.showinfo(message='Saved Successfully!')
     else:
         messagebox.showinfo(message='No Unsaved Changes')
@@ -190,6 +217,7 @@ def func_exit():
             return
         elif should_save:
             save()
+            send_file()
     destroy_temp()
     window.destroy()
     quit()
@@ -205,3 +233,4 @@ create_table(window)
 
 if __name__ == '__main__':
     window.mainloop()
+    s.close()
